@@ -41,7 +41,7 @@ def main():
         "end_time",
     ]
 
-    rd = json.loads(open(jsonfile))
+    rd = json.loads(open(jsonfile, 'r'))
     with open(csvfile, "w", newline="") as f:
         w = csv.DictWriter(f, headers1 + headers2)
         w.writeheader()

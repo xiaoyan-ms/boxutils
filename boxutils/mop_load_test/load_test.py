@@ -1,4 +1,5 @@
 from __future__ import annotations
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import json
 import random
@@ -8,9 +9,7 @@ import traceback
 from typing import Any
 import click
 import multiprocessing as mp
-
 import requests
-
 from boxutils.common.common import MetricsTracker, TokenProvider
 
 
@@ -43,14 +42,19 @@ def request_handler_process(
     token: TokenProvider,
 ):
     session = requests.Session()
+    pool = ThreadPoolExecutor(max_workers=50)
     while True:
-        msg1 = q_req.get(block=True)
+        msg = q_req.get(block=True)
+        pool.submit(inference, session, endpoint, token, msg.body, q_rsp)
+
+
+def inference(session: requests.Session, endpoint: str, token: TokenProvider, body: Any, q_rsp: mp.Queue[_RspMsg]):
         headers = {
             "Authorization": f"Bearer {token.get()}",
         } 
         t1 = time.perf_counter()
         try:
-            r = session.post(endpoint, json=msg1.body, headers=headers)
+            r = session.post(endpoint, json=body, headers=headers)
             t2 = time.perf_counter()
             msg2 = _RspMsg(
                 duration=(t2-t1) * 1000,
@@ -66,8 +70,7 @@ def request_handler_process(
                 status=0,
                 error=f'{e}',
             )
-            q_rsp.put(msg2)
-
+            q_rsp.put(msg2)    
 
 
 def result_collect_process(q_rsp: mp.Queue[_RspMsg]):

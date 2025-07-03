@@ -55,6 +55,7 @@ def inference(session: requests.Session, endpoint: str, token: TokenProvider, bo
         t1 = time.perf_counter()
         try:
             r = session.post(endpoint, json=body, headers=headers)
+            len(r.text)
             t2 = time.perf_counter()
             msg2 = _RspMsg(
                 duration=(t2-t1) * 1000,

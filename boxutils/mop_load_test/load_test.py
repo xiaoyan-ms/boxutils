@@ -1,9 +1,11 @@
-
+from __future__ import annotations
 from dataclasses import dataclass
+import json
 import random
 import threading
 import time
 import traceback
+from typing import Any
 import click
 import multiprocessing as mp
 
@@ -14,7 +16,7 @@ from boxutils.common.common import MetricsTracker, TokenProvider
 
 @dataclass
 class _ReqMsg:
-    body: str
+    body: Any
 
 
 @dataclass
@@ -24,10 +26,10 @@ class _RspMsg:
     error: str
 
 
-def load_sample_file(filename: str) -> list[str]:
+def load_sample_file(filename: str) -> list[Any]:
     with open(filename, 'r') as f:
         samples = [
-            x.strip() for x in f.readlines() if x.strip() != ''
+            json.loads(x) for x in f.readlines() if x.strip() != ''
         ]
         if len(samples) == 0:
             raise Exception('Sample count is 0')
@@ -48,7 +50,7 @@ def request_handler_process(
         } 
         t1 = time.perf_counter()
         try:
-            r = session.post(endpoint, data=msg1.body, headers=headers)
+            r = session.post(endpoint, json=msg1.body, headers=headers)
             t2 = time.perf_counter()
             msg2 = _RspMsg(
                 duration=(t2-t1) * 1000,
@@ -56,6 +58,7 @@ def request_handler_process(
                 error='',
             )
             q_rsp.put(msg2)
+
         except Exception as e:
             t2 = time.perf_counter()
             msg2 = _RspMsg(

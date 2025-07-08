@@ -15,3 +15,7 @@ numpy = "2.2.6"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.scripts]
+loadtest = 'boxutils.mop_load_test.load_test:main'

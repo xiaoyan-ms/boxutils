@@ -116,6 +116,7 @@ class ResponseCollecter:
         self.output_io = open(output_file, "w", newline="")
         self.output_csv = csv.DictWriter(self.output_io, ["target_rps", "actual_rps", "req_count_total", "error_percent",  "p50_latency_ms", "p90_latency_ms", "p95_latency_ms", "p99_latency_ms", "start_time", "end_time"])
         self.output_csv.writeheader()
+        self.output_io.flush()
         self.last_flush_ts = time.time()
         self.last_print_sec = time.time()
         self.buff: list[_RspMsg] = []
@@ -147,17 +148,17 @@ class ResponseCollecter:
         self.last_flush_ts = time.time()
         
         req_count_total = len(prev_buff)
-        req_count_error = len(x for x in prev_buff if not(200 <= x.status < 300))
+        req_count_error = len([x for x in prev_buff if not(200 <= x.status < 300)])
         error_percent = 100.0 * req_count_error / req_count_total
         actual_rps = req_count_total / max(self.last_flush_ts - prev_last_flush_ts, 1)
         start_time = datetime.fromtimestamp(prev_last_flush_ts)
         end_time = datetime.fromtimestamp(self.last_flush_ts)
 
         narr = np.array([x.duration for x in prev_buff])
-        p50=float(np.percentile(narr, 50)),
-        p90=float(np.percentile(narr, 90)),
-        p95=float(np.percentile(narr, 95)),
-        p99=float(np.percentile(narr, 99)),
+        p50=float(np.percentile(narr, 50))
+        p90=float(np.percentile(narr, 90))
+        p95=float(np.percentile(narr, 95))
+        p99=float(np.percentile(narr, 99))
 
         d = {
             "target_rps": target_rps, 

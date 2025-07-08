@@ -114,7 +114,9 @@ class ResponseCollecter:
         self.q_rsp = q_rsp
         self.output_file = output_file
         self.output_io = open(output_file, "w", newline="")
-        self.output_csv = csv.DictWriter(self.output_io, ["target_rps", "actual_rps", "req_count_total", "error_percent",  "p50_latency_ms", "p90_latency_ms", "p95_latency_ms", "p99_latency_ms", "start_time", "end_time"])
+        self.output_csv = csv.DictWriter(self.output_io, [
+            "target_rps", "actual_rps", "req_count_total", "error_percent",  "p50_latency_ms", "p90_latency_ms", "p95_latency_ms", "p99_latency_ms", "start_time", "end_time"
+            ])
         self.output_csv.writeheader()
         self.output_io.flush()
         self.last_flush_ts = time.time()
@@ -256,10 +258,12 @@ def main(
         # send
         dur = 1.0 / max(rps, 1)
         cnt = math.ceil(step_seconds / dur)
+        tcur = time.perf_counter()
         for _ in range(cnt):
             sample = random.choice(samples)
             q_req.put(_ReqMsg(body=sample))
-            time.sleep(dur)
+            tcur += dur
+            time.sleep(max(tcur - time.perf_counter(), 0))
 
         # collect
         d = collecter.flush(rps)

@@ -72,7 +72,7 @@ def inference(session: requests.Session, endpoint: str, token: TokenProvider, bo
             "Authorization": f"Bearer {token.get()}",
         } 
         t1 = time.perf_counter()
-        r = session.post(endpoint, json=body, headers=headers)
+        r = session.post(endpoint, json=body, headers=headers, timeout=10)
         len(r.text)
         t2 = time.perf_counter()
         

@@ -221,6 +221,12 @@ class ResponseCollecter:
     default=60,
 )
 @click.option(
+    "--max-error-rate",
+    type=float,
+    required=False,
+    default=10,
+)
+@click.option(
     "--sample-file",
     type=str,
     required=True,
@@ -239,6 +245,7 @@ def main(
     rps_min: int,
     rps_max: int,
     step_seconds: int,
+    max_error_rate: float,
     sample_file: str,
     output_file: str,
 ):
@@ -282,7 +289,7 @@ def main(
     
         # end
         error_percent = d["error_percent"]
-        if error_percent > 10:
+        if error_percent > max_error_rate:
             print(f'Finish load testing, error percentage hit {error_percent} %')
             return
         

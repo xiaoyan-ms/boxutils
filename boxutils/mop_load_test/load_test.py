@@ -15,6 +15,8 @@ import click
 import multiprocessing as mp
 import numpy as np
 import requests
+import hashlib
+import uuid
 from boxutils.common.common import MetricsTracker, TokenProvider
 
 
@@ -29,6 +31,7 @@ class HttpFailException(Exception):
 
 @dataclass
 class _ReqMsg:
+    reqid: str
     body: Any
 
 
@@ -39,10 +42,12 @@ class _RspMsg:
     error: Optional[Exception]
 
 
-def load_sample_file(filename: str) -> list[Any]:
+def load_sample_file(filename: str) -> list[tuple[int, Any]]:
+    fileid = int(hashlib.md5(filename.encode()).hexdigest(), 16)
+    fileid = fileid % 2**32 * 2**48
     with open(filename, 'r') as f:
         samples = [
-            json.loads(x) for x in f.readlines() if x.strip() != ''
+            (fileid+i+1, json.loads(x)) for i, x in enumerate(f.readlines()) if x.strip() != ''
         ]
         if len(samples) == 0:
             raise Exception('Sample count is 0')
@@ -60,16 +65,17 @@ def request_handler_process(
     try:
         while True:
             msg = q_req.get(block=True)
-            pool.submit(inference, session, endpoint, token, msg.body, q_rsp)
+            pool.submit(inference, session, endpoint, token, msg.body, msg.reqid, q_rsp)
     except:
         traceback.print_exc()
         sys.exit(1)
 
 
-def inference(session: requests.Session, endpoint: str, token: TokenProvider, body: Any, q_rsp: mp.Queue[_RspMsg]):
+def inference(session: requests.Session, endpoint: str, token: TokenProvider, body: Any, reqid: str, q_rsp: mp.Queue[_RspMsg]):
     try:
         headers = {
             "Authorization": f"Bearer {token.get()}",
+            "x-ms-client-request-id": reqid,
         } 
         t1 = time.perf_counter()
         r = session.post(endpoint, json=body, headers=headers, timeout=10)
@@ -267,8 +273,9 @@ def main(
         cnt = math.ceil(step_seconds / dur)
         tcur = time.perf_counter()
         for _ in range(cnt):
-            sample = random.choice(samples)
-            q_req.put(_ReqMsg(body=sample))
+            subid, body = random.choice(samples)
+            reqid = str(uuid.UUID(int=int(uuid.uuid4()) // 2**80 *2**80 + subid))
+            q_req.put(_ReqMsg(body=body, reqid=reqid))
             tcur += dur
             time.sleep(max(tcur - time.perf_counter(), 0))
 
